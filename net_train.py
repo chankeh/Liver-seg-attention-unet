@@ -36,14 +36,20 @@ def train_epoch(model, loader, optimizer, criterion, epoch, n_epochs, print_freq
     # Model on train mode
     model.train()
 
-
-    for batch_idx, sample_batched in enumerate(loader):
-        if torch.cuda.is_available():
-            data_var = sample_batched['data'].cuda()
-            label_var = sample_batched['label'].cuda()
-        else:
-            data_var = sample_batched['data']
-            label_var = sample_batched['label']
+    sample_batched = loader.dataset
+    if torch.cuda.is_available():
+        data_var = sample_batched['data'].cuda()
+        label_var = sample_batched['label'].cuda()
+    else:
+        data_var = sample_batched['data']
+        label_var = sample_batched['label']
+    # for batch_idx, sample_batched in enumerate(loader.dataset):# TODO  error occurs here
+    #     if torch.cuda.is_available():
+    #         data_var = sample_batched['data'].cuda()
+    #         label_var = sample_batched['label'].cuda()
+    #     else:
+    #         data_var = sample_batched['data']
+    #         label_var = sample_batched['label']
 
         # compute output
         output = model(data_var)
@@ -59,13 +65,13 @@ def train_epoch(model, loader, optimizer, criterion, epoch, n_epochs, print_freq
         optimizer.step()
 
         # print stats
-        if batch_idx % print_freq == 0:
-            res = '\t'.join([
-                'Epoch: [%d/%d]' % (epoch + 1, n_epochs),
-                'Iter: [%d/%d]' % (batch_idx + 1, len(loader)),
-                'Loss %.4f (%.4f)' % (losses.value, losses.avg),  # losses.val is the value of this batch
-            ])
-            print(res)
+        # if batch_idx % print_freq == 0:
+        #     res = '\t'.join([
+        #         'Epoch: [%d/%d]' % (epoch + 1, n_epochs),
+        #         'Iter: [%d/%d]' % (batch_idx + 1, len(loader)),
+        #         'Loss %.4f (%.4f)' % (losses.value, losses.avg),  # losses.val is the value of this batch
+        #     ])
+        #     print(res)
 
     # Return summary statistics
     return losses.avg
