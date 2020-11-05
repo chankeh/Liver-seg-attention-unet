@@ -30,19 +30,21 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def train_epoch(model, loader, optimizer, criterion, epoch, n_epochs, print_freq):
+def train_epoch(model, train_loader,label_loader, optimizer, criterion, epoch, n_epochs, print_freq):
     losses = AverageMeter()
 
     # Model on train mode
     model.train()
 
-    sample_batched = loader.dataset
+    train_batched = train_loader.dataset
+    label_batched = label_loader.dataset
     if torch.cuda.is_available():
-        data_var = sample_batched['data'].cuda()
-        label_var = sample_batched['label'].cuda()
+        # data_var = sample_batched['data'].cuda()
+        data_var = train_batched.cuda()
+        label_var = label_batched.cuda()
     else:
-        data_var = sample_batched['data']
-        label_var = sample_batched['label']
+        data_var = train_batched
+        label_var = label_batched
     # for batch_idx, sample_batched in enumerate(loader.dataset):# TODO  error occurs here
     #     if torch.cuda.is_available():
     #         data_var = sample_batched['data'].cuda()
@@ -52,11 +54,11 @@ def train_epoch(model, loader, optimizer, criterion, epoch, n_epochs, print_freq
     #         label_var = sample_batched['label']
 
         # compute output
-        output = model(data_var)
-        loss = criterion(output, label_var)
+        output = model(torch.FloatTensor(data_var))
+        loss = criterion(output, torch.FloatTensor(label_var))
 
         # measure accuracy and record loss
-        batch_size = sample_batched['label'].size(0)
+        batch_size = label_batched.size(0)
         losses.update(loss.data, batch_size)
 
         # compute gradient and do SGD step
@@ -130,7 +132,7 @@ def train_net(model,
               val_label_path,
               n_epochs,
               batch_size,
-              # weight,
+              weight,
               checkpoint_dir='weights',
               lr=1e-4):
 
@@ -143,8 +145,12 @@ def train_net(model,
     train_dataset = NrrdReader3D(train_data_path, train_label_path)
     val_dataset = NrrdReader3D(val_data_path, val_label_path)
 
+    label_dataset = NrrdReader3D(train_label_path)
+
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    label_dataloader = DataLoader(train_label_path,batch_size=batch_size, shuffle=True)
 
     print('''
     Starting training:
@@ -164,7 +170,7 @@ def train_net(model,
     val_losses = []
     for epoch in range(n_epochs):
         losses_avg = train_epoch(model,
-                                 train_dataloader,
+                                  label_dataloader,
                                  optimizer,
                                  criterion,
                                  epoch,
@@ -201,7 +207,7 @@ def train_net(model,
 
 
 if __name__ == '__main__':
-    # torch.cuda.device(1)
+    torch.cuda.device(0)
     net = AttentionUNet2D(n_channels=1, n_classes=2)
     train_net(model=net,
               train_data_path='./liver/train/data_train',
@@ -209,8 +215,8 @@ if __name__ == '__main__':
               val_data_path='./liver/val/data_val',
               val_label_path='./liver/val/label',
               n_epochs=50,
-              batch_size=48)
-              # weight=torch.FloatTensor([0.2, 15, 15]).cuda())
+              batch_size=48,
+              weight=torch.FloatTensor([0.2, 15, 15]))
 
 
 
